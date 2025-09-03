@@ -1,6 +1,6 @@
 [package]
 name = "dex-math"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 
 [lib]
@@ -8,8 +8,8 @@ name = "dex_math"
 path = "src/lib.rs"
 
 [dependencies]
-anchor-lang = "0.30.1"
-anchor-spl = "0.30.1"
+anchor-lang = "0.31.1"
+anchor-spl = "0.31.1"
 borsh = "0.10"
 
 [dev-dependencies]
