@@ -169,18 +169,19 @@ pub fn quote(
         get_transfer_fee(output_transfer_fee_config, result_amounts.to_amount as u64, epoch)?;
 
     // Take transfer fees into account for actual amount transferred in
-    let actual_output_amount = (result_amounts.to_amount as u64)
+    let user_received_amount = (result_amounts.to_amount as u64)
         .checked_sub(output_transfer_fee)
         .unwrap();
 
-    if actual_output_amount == 0 {
+    if user_received_amount == 0 {
         return err!(ErrorCode::OutputIsZero);
     }
 
     Ok(QuoteOutput {
         from_amount: result_amounts.from_amount,
         to_amount: result_amounts.to_amount,
-        to_amount_after_transfer_fees: actual_output_amount,
+        to_amount_after_transfer_fees: user_received_amount,
+        from_amount_after_transfer_fees: exchange_in,
         trade_fee: result_amounts.trade_fee,
         protocol_fee: result_amounts.protocol_fee,
         from_to_lock: result_amounts.from_to_lock,
