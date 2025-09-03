@@ -1,4 +1,4 @@
-use crate::{state::{QuoteOutput, RebalanceResult, SwapResultWithFromToLock}, swap, utils::get_transfer_fee, AmmConfig, ErrorCode, MAX_PERCENTAGE};
+use crate::{rebalance_pool_ratio, state::{QuoteOutput, RebalanceResult, SwapResultWithFromToLock}, swap, utils::get_transfer_fee, AmmConfig, ErrorCode, MAX_PERCENTAGE};
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022::spl_token_2022;
 
@@ -188,72 +188,6 @@ pub fn quote(
     })
 }
 
-pub fn rebalance_pool_ratio(
-    to_amount_swapped: u64,
-    current_source_amount: u64,
-    current_destination_amount: u64,
-    original_source_amount: u64,
-    original_destination_amount: u64,
-    ratio_change_tolerance_rate: u64,
-) -> Option<RebalanceResult> {
-    if to_amount_swapped >= current_destination_amount
-        || current_source_amount == 0
-        || current_destination_amount == 0
-    {
-        // Should never happen, but just in case
-        return Some(RebalanceResult {
-            from_to_lock: 0,
-            is_rate_tolerance_exceeded: true,
-        });
-    }
-
-    // Calculate the remaining destination amount after swap
-    let remaining_destination = current_destination_amount.checked_sub(to_amount_swapped)?;
-
-    let original_ratio = original_source_amount as f64 / original_destination_amount as f64;
-
-    // Calculate the exact floating-point value that would give us the perfect ratio
-    let exact_from_to_lock =
-        current_source_amount as f64 - (remaining_destination as f64 * original_ratio);
-
-    // Find the optimal integer from_to_lock by testing values around the exact value
-    let mut best_from_to_lock = 0u64;
-    let mut best_ratio_diff = f64::INFINITY;
-
-    // Test a range of values around the exact value
-    let start_val = (exact_from_to_lock - 1.0).max(0.0) as u64;
-    let end_val = (exact_from_to_lock + 1.0).min(current_source_amount as f64) as u64;
-
-    for test_from_to_lock in start_val..=end_val {
-        if test_from_to_lock > current_source_amount {
-            continue;
-        }
-
-        let new_source = current_source_amount.checked_sub(test_from_to_lock)?;
-        let new_ratio = new_source as f64 / remaining_destination as f64;
-        let ratio_diff = (new_ratio - original_ratio).abs();
-
-        if ratio_diff < best_ratio_diff && new_ratio != 0.0 {
-            best_ratio_diff = ratio_diff;
-            best_from_to_lock = test_from_to_lock;
-        }
-    }
-
-    let from_to_lock = best_from_to_lock;
-    let new_source_amount = current_source_amount.checked_sub(from_to_lock)?;
-    let new_ratio = new_source_amount as f64 / remaining_destination as f64;
-
-    // Calculate percentage change
-    let percentage_change = (new_ratio - original_ratio).abs() / original_ratio * 100.0;
-
-    let tolerance_percentage = (ratio_change_tolerance_rate as f64 / MAX_PERCENTAGE as f64) * 100.0;
-    let is_rate_tolerance_exceeded = percentage_change > tolerance_percentage;
-
-    Some(RebalanceResult {
-        from_to_lock,
-        is_rate_tolerance_exceeded,
-    })
-}
 
 #[cfg(test)]
 mod tests {

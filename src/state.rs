@@ -38,6 +38,7 @@ pub struct QuoteOutput {
     pub from_to_lock: u64,
 }
 
+#[derive(Debug)]
 pub struct RebalanceResult {
     pub from_to_lock: u64,
     pub is_rate_tolerance_exceeded: bool,
