@@ -171,10 +171,8 @@ pub mod tests {
     use {
         super::*,
         proptest::prelude::*,
-        spl_math::{precise_number::PreciseNumber, uint::U256},
+        spl_math::{precise_number::PreciseNumber},
     };
-
-    use crate::constants::MIN_LIQUIDITY;
 
     /// Calculates the total normalized value of the curve given the liquidity
     /// parameters.
@@ -762,7 +760,7 @@ pub mod tests {
     //     }
     // }
 
-    // #[test]
+    #[test]
     fn test_from_to_lock_transition_manually() {
         // Test cases with different ratios and amounts - both small and large values
         // Format: (to_amount_swapped, current_source_amount, current_destination_amount, original_source_amount, original_destination_amount, is_out_of_range, tolerance_rate)

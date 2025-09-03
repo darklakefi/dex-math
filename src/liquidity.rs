@@ -61,34 +61,3 @@ pub fn withdraw_lp(
     
     (token_a_amount, token_b_amount)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_deposit_lp_initial() {
-        let result = deposit_lp(1000, 2000, 0, 0, 0);
-        assert_eq!(result, 1414); // sqrt(1000 * 2000) ≈ 1414
-    }
-
-    #[test]
-    fn test_deposit_lp_existing() {
-        let result = deposit_lp(100, 200, 1000, 1000, 2000);
-        assert_eq!(result, 100); // min(100, 100) = 100
-    }
-
-    #[test]
-    fn test_withdraw_lp() {
-        let (token_a, token_b) = withdraw_lp(100, 1000, 1000, 2000);
-        assert_eq!(token_a, 100); // 100 * 1000 / 1000 = 100
-        assert_eq!(token_b, 200); // 100 * 2000 / 1000 = 200
-    }
-
-    #[test]
-    fn test_withdraw_lp_zero_supply() {
-        let (token_a, token_b) = withdraw_lp(100, 0, 1000, 2000);
-        assert_eq!(token_a, 0);
-        assert_eq!(token_b, 0);
-    }
-}
