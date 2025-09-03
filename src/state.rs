@@ -12,11 +12,7 @@ pub struct AmmConfig {
 
     pub ratio_change_tolerance_rate: u64, // 10^6 = 100%
 
-    pub bump: u8,
     pub halted: bool, // if true, no actions are allowed
-
-    /// padding
-    pub padding: [u64; 16],
 }
 
 pub struct SwapResultWithFromToLock {
