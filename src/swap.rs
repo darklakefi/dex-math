@@ -1,6 +1,5 @@
-use crate::{rebalance_pool_ratio, state::{QuoteOutput, SwapResultWithFromToLock}, swap, utils::get_transfer_fee, AmmConfig, ErrorCode, MAX_PERCENTAGE};
+use crate::{rebalance_pool_ratio, state::{QuoteOutput, SwapResultWithFromToLock}, swap, AmmConfig, ErrorCode, MAX_PERCENTAGE};
 use anchor_lang::prelude::{Pubkey, Result, err};
-use anchor_spl::token_2022::spl_token_2022;
 
 /// Swap operations for DEX
 /// 
@@ -20,8 +19,7 @@ pub fn quote(
     amount_in: u64,
     is_swap_x_to_y: bool,
     amm_config: &AmmConfig,
-    token_x_transfer_fee_config: &Option<spl_token_2022::extension::transfer_fee::TransferFeeConfig>,
-    token_y_transfer_fee_config: &Option<spl_token_2022::extension::transfer_fee::TransferFeeConfig>,
+    input_transfer_fee: u64,
     token_x_mint: Pubkey,
     token_y_mint: Pubkey,
     protocol_fee_x: u64,
@@ -62,9 +60,6 @@ pub fn quote(
     // Calculate the output amount using the constant product formula
     let result_amounts: SwapResultWithFromToLock = if is_swap_x_to_y {
         // Swap X to Y
-
-        let input_transfer_fee =
-            get_transfer_fee(token_x_transfer_fee_config, amount_in, epoch)?;
 
         // Take transfer fees into account for actual amount transferred in
         exchange_in = amount_in.saturating_sub(input_transfer_fee);
@@ -109,8 +104,6 @@ pub fn quote(
             protocol_fee: result_amounts.protocol_fee,
         }
     } else {
-        let input_transfer_fee =
-            get_transfer_fee(token_y_transfer_fee_config, amount_in, epoch)?;
         // Take transfer fees into account for actual amount transferred in
         exchange_in = amount_in.saturating_sub(input_transfer_fee);
         if exchange_in == 0 {
@@ -154,33 +147,9 @@ pub fn quote(
         }
     };
 
-    let output_mint = if is_swap_x_to_y {
-        token_y_mint
-    } else {
-        token_x_mint
-    };
-
-    let output_transfer_fee_config = if output_mint == token_x_mint {
-        token_x_transfer_fee_config
-    } else {
-        token_y_transfer_fee_config
-    };
-    let output_transfer_fee =
-        get_transfer_fee(output_transfer_fee_config, result_amounts.to_amount as u64, epoch)?;
-
-    // Take transfer fees into account for actual amount transferred in
-    let user_received_amount = (result_amounts.to_amount as u64)
-        .checked_sub(output_transfer_fee)
-        .unwrap();
-
-    if user_received_amount == 0 {
-        return err!(ErrorCode::OutputIsZero);
-    }
-
     Ok(QuoteOutput {
         from_amount: result_amounts.from_amount,
         to_amount: result_amounts.to_amount,
-        to_amount_after_transfer_fees: user_received_amount,
         from_amount_after_transfer_fees: exchange_in,
         trade_fee: result_amounts.trade_fee,
         protocol_fee: result_amounts.protocol_fee,

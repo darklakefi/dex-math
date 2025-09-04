@@ -20,7 +20,6 @@ pub struct QuoteOutput {
 
     // imposed by token not exchange
     pub from_amount_after_transfer_fees: u64,
-    pub to_amount_after_transfer_fees: u64,
 
     pub trade_fee: u64,
     pub protocol_fee: u64,

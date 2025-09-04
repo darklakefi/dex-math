@@ -1,23 +1,5 @@
-use anchor_spl::token_2022:: spl_token_2022;
+use crate::{state::SwapResult, RebalanceResult, MAX_PERCENTAGE};
 
-use crate::{state::SwapResult, ErrorCode, RebalanceResult, MAX_PERCENTAGE};
-
-pub fn get_transfer_fee(
-    transfer_fee_config: &Option<spl_token_2022::extension::transfer_fee::TransferFeeConfig>,
-    pre_fee_amount: u64,
-    epoch: u64,
-) -> Result<u64, ErrorCode> {
-    if transfer_fee_config.is_none() {
-        return Ok(0);
-    }
-
-    let transfer_fee_config = transfer_fee_config.unwrap();
-
-    let fee = transfer_fee_config
-        .calculate_epoch_fee(epoch, pre_fee_amount)
-        .unwrap();
-    Ok(fee)
-}
 
 fn ceil_div(token_amount: u128, fee_numerator: u128, fee_denominator: u128) -> Option<u128> {
     token_amount
