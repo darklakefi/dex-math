@@ -1,20 +1,21 @@
 use crate::{rebalance_pool_ratio, state::{QuoteOutput, SwapResultWithFromToLock}, swap, AmmConfig, ErrorCode};
 use anchor_lang::prelude::{Result, err};
 
-/// Swap operations for DEX
-/// 
-/// This module provides mathematical functions for token swapping operations
-/// including quoting output amounts for given input amounts.
-
-/// Calculate the output amount for a given input amount
+/// Quote the output amount for a given input amount
 /// 
 /// # Arguments
-/// * `input_amount` - The amount of input tokens
-/// * `input_reserve` - The reserve of input tokens in the pool
-/// * `output_reserve` - The reserve of output tokens in the pool
-/// 
-/// # Returns
-/// The output amount as u64
+/// * `exchange_in` - The amount of input tokens after transfer fees
+/// * `is_swap_x_to_y` - Whether to swap X to Y
+/// * `amm_config` - The configuration of the AMM
+/// * `protocol_fee_x` - The accumulated protocol fee balance for X
+/// * `protocol_fee_y` - The accumulated protocol fee balance for Y
+/// * `user_locked_x` - The amount of X user funds locked in the pool
+/// * `user_locked_y` - The amount of Y user funds locked in the pool
+/// * `locked_x` - The amount of X pool funds locked in the pool
+/// * `locked_y` - The amount of Y pool funds locked in the pool
+/// * `reserve_x_balance` - The total balance of X in the pool
+/// * `reserve_y_balance` - The total balance of Y in the pool
+
 pub fn quote(
     exchange_in: u64,
     is_swap_x_to_y: bool,
