@@ -1,5 +1,5 @@
-use crate::{rebalance_pool_ratio, state::{QuoteOutput, SwapResultWithFromToLock}, swap, AmmConfig, ErrorCode, MAX_PERCENTAGE};
-use anchor_lang::prelude::{Pubkey, Result, err};
+use crate::{rebalance_pool_ratio, state::{QuoteOutput, SwapResultWithFromToLock}, swap, AmmConfig, ErrorCode};
+use anchor_lang::prelude::{Result, err};
 
 /// Swap operations for DEX
 /// 
@@ -20,8 +20,6 @@ pub fn quote(
     is_swap_x_to_y: bool,
     amm_config: &AmmConfig,
     input_transfer_fee: u64,
-    token_x_mint: Pubkey,
-    token_y_mint: Pubkey,
     protocol_fee_x: u64,
     protocol_fee_y: u64,
     user_locked_x: u64,
@@ -30,7 +28,6 @@ pub fn quote(
     locked_y: u64,
     reserve_x_balance: u64,
     reserve_y_balance: u64,
-    epoch: u64,
 ) -> Result<QuoteOutput> {
     // exclude protocol fees / locked pool reserves / user pending orders
     let (total_token_x_amount, total_token_y_amount) = (
