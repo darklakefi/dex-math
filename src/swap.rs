@@ -16,10 +16,9 @@ use anchor_lang::prelude::{Result, err};
 /// # Returns
 /// The output amount as u64
 pub fn quote(
-    amount_in: u64,
+    exchange_in: u64,
     is_swap_x_to_y: bool,
     amm_config: &AmmConfig,
-    input_transfer_fee: u64,
     protocol_fee_x: u64,
     protocol_fee_y: u64,
     user_locked_x: u64,
@@ -53,17 +52,12 @@ pub fn quote(
     );
 
     // the amount we receive excluding any outside transfer fees
-    let exchange_in;
+    if exchange_in == 0 {
+        return err!(ErrorCode::InputAmountTooSmall);
+    }
     // Calculate the output amount using the constant product formula
     let result_amounts: SwapResultWithFromToLock = if is_swap_x_to_y {
         // Swap X to Y
-
-        // Take transfer fees into account for actual amount transferred in
-        exchange_in = amount_in.saturating_sub(input_transfer_fee);
-
-        if exchange_in == 0 {
-            return err!(ErrorCode::InputAmountTooSmall);
-        }
 
         let result_amounts = swap(
             exchange_in as u128,
@@ -101,11 +95,6 @@ pub fn quote(
             protocol_fee: result_amounts.protocol_fee,
         }
     } else {
-        // Take transfer fees into account for actual amount transferred in
-        exchange_in = amount_in.saturating_sub(input_transfer_fee);
-        if exchange_in == 0 {
-            return err!(ErrorCode::InputAmountTooSmall);
-        }
         // Swap Y to X
         let result_amounts = swap(
             exchange_in as u128,
@@ -147,7 +136,6 @@ pub fn quote(
     Ok(QuoteOutput {
         from_amount: result_amounts.from_amount,
         to_amount: result_amounts.to_amount,
-        from_amount_after_transfer_fees: exchange_in,
         trade_fee: result_amounts.trade_fee,
         protocol_fee: result_amounts.protocol_fee,
         from_to_lock: result_amounts.from_to_lock,
