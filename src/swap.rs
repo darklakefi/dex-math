@@ -53,7 +53,7 @@ pub fn quote(
 
     // the amount we receive excluding any outside transfer fees
     if exchange_in == 0 {
-        return err!(ErrorCode::InputAmountTooSmall);
+        return err!(ErrorCode::MathLibInputAmountTooSmall);
     }
     // Calculate the output amount using the constant product formula
     let result_amounts: SwapResultWithFromToLock = if is_swap_x_to_y {
@@ -66,7 +66,7 @@ pub fn quote(
             amm_config.trade_fee_rate,
             amm_config.protocol_fee_rate,
         )
-        .ok_or(ErrorCode::MathOverflow)?;
+        .ok_or(ErrorCode::MathLibMathOverflow)?;
 
         let rebalance_result = rebalance_pool_ratio(
             result_amounts.to_amount,
@@ -76,15 +76,15 @@ pub fn quote(
             total_token_y_amount,
             amm_config.ratio_change_tolerance_rate,
         )
-        .ok_or(ErrorCode::MathOverflow)?;
+        .ok_or(ErrorCode::MathLibMathOverflow)?;
 
         if rebalance_result.is_rate_tolerance_exceeded {
-            return err!(ErrorCode::TradeTooBig);
+            return err!(ErrorCode::MathLibTradeTooBig);
         }
 
         // can't reserve to 0 or negative
         if rebalance_result.from_to_lock >= available_token_x_amount {
-            return err!(ErrorCode::InsufficientPoolTokenXBalance);
+            return err!(ErrorCode::MathLibInsufficientPoolTokenXBalance);
         }
 
         SwapResultWithFromToLock {
@@ -103,7 +103,7 @@ pub fn quote(
             amm_config.trade_fee_rate,
             amm_config.protocol_fee_rate,
         )
-        .ok_or(ErrorCode::MathOverflow)?;
+        .ok_or(ErrorCode::MathLibMathOverflow)?;
 
         let rebalance_result = rebalance_pool_ratio(
             result_amounts.to_amount,
@@ -113,15 +113,15 @@ pub fn quote(
             total_token_x_amount,
             amm_config.ratio_change_tolerance_rate,
         )
-        .ok_or(ErrorCode::MathOverflow)?;
+        .ok_or(ErrorCode::MathLibMathOverflow)?;
 
         if rebalance_result.is_rate_tolerance_exceeded {
-            return err!(ErrorCode::TradeTooBig);
+            return err!(ErrorCode::MathLibTradeTooBig);
         }
 
         // can't reserve to 0 or negative
         if rebalance_result.from_to_lock > available_token_y_amount {
-            return err!(ErrorCode::InsufficientPoolTokenYBalance);
+            return err!(ErrorCode::MathLibInsufficientPoolTokenYBalance);
         }
 
         SwapResultWithFromToLock {
