@@ -1,18 +1,7 @@
-use anchor_lang::{AnchorDeserialize, AnchorSerialize};
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct AmmConfig {
     pub trade_fee_rate: u64,    // 10^6 = 100%
-    pub create_pool_fee: u64,   // flat SOL fee for creating a pool
     pub protocol_fee_rate: u64, // 10^6 = 100% (precentage of trade fee)
-
-    pub wsol_trade_deposit: u64, // this should AT LEAST be the size of tx fee + any account creation fees
-
-    pub deadline_slot_duration: u64,
-
     pub ratio_change_tolerance_rate: u64, // 10^6 = 100%
-
-    pub halted: bool, // if true, no actions are allowed
 }
 
 pub struct SwapResultWithFromToLock {
