@@ -1,29 +1,25 @@
-use crate::{rebalance_pool_ratio, state::{QuoteOutput, SwapResultWithFromToLock}, swap, utils::get_transfer_fee, AmmConfig, ErrorCode, MAX_PERCENTAGE};
-use anchor_lang::prelude::{Pubkey, Result, err};
-use anchor_spl::token_2022::spl_token_2022;
+use crate::{rebalance_pool_ratio, state::{QuoteOutput, SwapResultWithFromToLock}, swap, AmmConfig, ErrorCode};
+use anchor_lang::prelude::{Result, err};
 
-/// Swap operations for DEX
-/// 
-/// This module provides mathematical functions for token swapping operations
-/// including quoting output amounts for given input amounts.
-
-/// Calculate the output amount for a given input amount
+/// Quote the output amount for a given input amount
 /// 
 /// # Arguments
-/// * `input_amount` - The amount of input tokens
-/// * `input_reserve` - The reserve of input tokens in the pool
-/// * `output_reserve` - The reserve of output tokens in the pool
-/// 
-/// # Returns
-/// The output amount as u64
+/// * `exchange_in` - The amount of input tokens after transfer fees
+/// * `is_swap_x_to_y` - Whether to swap X to Y
+/// * `amm_config` - The configuration of the AMM
+/// * `protocol_fee_x` - The accumulated protocol fee balance for X
+/// * `protocol_fee_y` - The accumulated protocol fee balance for Y
+/// * `user_locked_x` - The amount of X user funds locked in the pool
+/// * `user_locked_y` - The amount of Y user funds locked in the pool
+/// * `locked_x` - The amount of X pool funds locked in the pool
+/// * `locked_y` - The amount of Y pool funds locked in the pool
+/// * `reserve_x_balance` - The total balance of X in the pool
+/// * `reserve_y_balance` - The total balance of Y in the pool
+
 pub fn quote(
-    amount_in: u64,
+    exchange_in: u64,
     is_swap_x_to_y: bool,
     amm_config: &AmmConfig,
-    token_x_transfer_fee_config: &Option<spl_token_2022::extension::transfer_fee::TransferFeeConfig>,
-    token_y_transfer_fee_config: &Option<spl_token_2022::extension::transfer_fee::TransferFeeConfig>,
-    token_x_mint: Pubkey,
-    token_y_mint: Pubkey,
     protocol_fee_x: u64,
     protocol_fee_y: u64,
     user_locked_x: u64,
@@ -32,7 +28,6 @@ pub fn quote(
     locked_y: u64,
     reserve_x_balance: u64,
     reserve_y_balance: u64,
-    epoch: u64,
 ) -> Result<QuoteOutput> {
     // exclude protocol fees / locked pool reserves / user pending orders
     let (total_token_x_amount, total_token_y_amount) = (
@@ -58,20 +53,12 @@ pub fn quote(
     );
 
     // the amount we receive excluding any outside transfer fees
-    let exchange_in;
+    if exchange_in == 0 {
+        return err!(ErrorCode::MathLibInputAmountTooSmall);
+    }
     // Calculate the output amount using the constant product formula
     let result_amounts: SwapResultWithFromToLock = if is_swap_x_to_y {
         // Swap X to Y
-
-        let input_transfer_fee =
-            get_transfer_fee(token_x_transfer_fee_config, amount_in, epoch)?;
-
-        // Take transfer fees into account for actual amount transferred in
-        exchange_in = amount_in.saturating_sub(input_transfer_fee);
-
-        if exchange_in == 0 {
-            return err!(ErrorCode::InputAmountTooSmall);
-        }
 
         let result_amounts = swap(
             exchange_in as u128,
@@ -80,7 +67,7 @@ pub fn quote(
             amm_config.trade_fee_rate,
             amm_config.protocol_fee_rate,
         )
-        .ok_or(ErrorCode::MathOverflow)?;
+        .ok_or(ErrorCode::MathLibMathOverflow)?;
 
         let rebalance_result = rebalance_pool_ratio(
             result_amounts.to_amount,
@@ -90,15 +77,15 @@ pub fn quote(
             total_token_y_amount,
             amm_config.ratio_change_tolerance_rate,
         )
-        .ok_or(ErrorCode::MathOverflow)?;
+        .ok_or(ErrorCode::MathLibMathOverflow)?;
 
         if rebalance_result.is_rate_tolerance_exceeded {
-            return err!(ErrorCode::TradeTooBig);
+            return err!(ErrorCode::MathLibTradeTooBig);
         }
 
         // can't reserve to 0 or negative
         if rebalance_result.from_to_lock >= available_token_x_amount {
-            return err!(ErrorCode::InsufficientPoolTokenXBalance);
+            return err!(ErrorCode::MathLibInsufficientPoolTokenXBalance);
         }
 
         SwapResultWithFromToLock {
@@ -109,13 +96,6 @@ pub fn quote(
             protocol_fee: result_amounts.protocol_fee,
         }
     } else {
-        let input_transfer_fee =
-            get_transfer_fee(token_y_transfer_fee_config, amount_in, epoch)?;
-        // Take transfer fees into account for actual amount transferred in
-        exchange_in = amount_in.saturating_sub(input_transfer_fee);
-        if exchange_in == 0 {
-            return err!(ErrorCode::InputAmountTooSmall);
-        }
         // Swap Y to X
         let result_amounts = swap(
             exchange_in as u128,
@@ -124,7 +104,7 @@ pub fn quote(
             amm_config.trade_fee_rate,
             amm_config.protocol_fee_rate,
         )
-        .ok_or(ErrorCode::MathOverflow)?;
+        .ok_or(ErrorCode::MathLibMathOverflow)?;
 
         let rebalance_result = rebalance_pool_ratio(
             result_amounts.to_amount,
@@ -134,15 +114,15 @@ pub fn quote(
             total_token_x_amount,
             amm_config.ratio_change_tolerance_rate,
         )
-        .ok_or(ErrorCode::MathOverflow)?;
+        .ok_or(ErrorCode::MathLibMathOverflow)?;
 
         if rebalance_result.is_rate_tolerance_exceeded {
-            return err!(ErrorCode::TradeTooBig);
+            return err!(ErrorCode::MathLibTradeTooBig);
         }
 
         // can't reserve to 0 or negative
         if rebalance_result.from_to_lock > available_token_y_amount {
-            return err!(ErrorCode::InsufficientPoolTokenYBalance);
+            return err!(ErrorCode::MathLibInsufficientPoolTokenYBalance);
         }
 
         SwapResultWithFromToLock {
@@ -154,34 +134,9 @@ pub fn quote(
         }
     };
 
-    let output_mint = if is_swap_x_to_y {
-        token_y_mint
-    } else {
-        token_x_mint
-    };
-
-    let output_transfer_fee_config = if output_mint == token_x_mint {
-        token_x_transfer_fee_config
-    } else {
-        token_y_transfer_fee_config
-    };
-    let output_transfer_fee =
-        get_transfer_fee(output_transfer_fee_config, result_amounts.to_amount as u64, epoch)?;
-
-    // Take transfer fees into account for actual amount transferred in
-    let user_received_amount = (result_amounts.to_amount as u64)
-        .checked_sub(output_transfer_fee)
-        .unwrap();
-
-    if user_received_amount == 0 {
-        return err!(ErrorCode::OutputIsZero);
-    }
-
     Ok(QuoteOutput {
         from_amount: result_amounts.from_amount,
         to_amount: result_amounts.to_amount,
-        to_amount_after_transfer_fees: user_received_amount,
-        from_amount_after_transfer_fees: exchange_in,
         trade_fee: result_amounts.trade_fee,
         protocol_fee: result_amounts.protocol_fee,
         from_to_lock: result_amounts.from_to_lock,
