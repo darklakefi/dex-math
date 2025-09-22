@@ -2,6 +2,12 @@
 name = "dex-math"
 version = "0.1.5"
 edition = "2021"
+description = "Darklake DEX Math"
+authors = ["Darklake Team"]
+license = "MIT"
+documentation = "https://docs.rs/dex-math"
+homepage = "https://github.com/darklakefi/dex-math"
+repository = "https://github.com/darklakefi/dex-math.git"
 
 [lib]
 name = "dex_math"
