@@ -15,6 +15,8 @@ use anchor_lang::prelude::{Result, err};
 /// * `locked_y` - The amount of Y pool funds locked in the pool
 /// * `reserve_x_balance` - The total balance of X in the pool
 /// * `reserve_y_balance` - The total balance of Y in the pool
+/// * `lp_fee_x` - The accumulated LP fee balance for X
+/// * `lp_fee_y` - The accumulated LP fee balance for Y
 
 pub fn quote(
     exchange_in: u64,
@@ -28,6 +30,8 @@ pub fn quote(
     locked_y: u64,
     reserve_x_balance: u64,
     reserve_y_balance: u64,
+    lp_fee_x: u64,
+    lp_fee_y: u64,
 ) -> Result<QuoteOutput> {
     // exclude protocol fees / locked pool reserves / user pending orders
     let (total_token_x_amount, total_token_y_amount) = (
@@ -35,11 +39,15 @@ pub fn quote(
             .checked_sub(protocol_fee_x)
             .unwrap()
             .checked_sub(user_locked_x)
+            .unwrap()
+            .checked_sub(lp_fee_x)
             .unwrap(),
         reserve_y_balance
             .checked_sub(protocol_fee_y)
             .unwrap()
             .checked_sub(user_locked_y)
+            .unwrap()
+            .checked_sub(lp_fee_y)
             .unwrap(),
     );
 
